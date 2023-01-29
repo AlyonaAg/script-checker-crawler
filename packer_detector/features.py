@@ -3,19 +3,94 @@ import dpath.util
 
 
 COLLECT_VARS_AND_FUNC_REGEX = "'type':\s+u?'([^']+)', 'name':\su?'([^']+)'"
+COLLECT_SWITCH_STATEMENT = "'type': 'SwitchStatement'"
+COLLECT_FOR_STATEMENT = "'type': 'ForStatement'"
+COLLECT_WHILE_STATEMENT = "'type': 'WhileStatement'"
+COLLECT_IF_STATEMENT = "'type': 'IfStatement'"
+COLLECT_ALL_STATEMENT = "'type': '([a-zA-Z]+)Statement'"
 CHECK_IDENTIFIER_HEX_REGEX = r'(\\x[0-9a-z][0-9a-z]){4,}'
+COUNT_LINE_BREAKS = r'(\n)'
 
 
-def unique_identifiers(parsed_js):
+def num_line_breaks(js):
+    return len(line_breaks(js))
+
+def line_breaks(js):
+    try:
+        x = re.findall(COUNT_LINE_BREAKS, str(js), re.DOTALL)
+    except Exception as e:
+        print(e)
+        return None
+    return x
+
+def switch_case(parsed_js):
+    return len(collect_switch_case(parsed_js))
+
+def collect_switch_case(parsed_js):
+    try:
+        x = re.findall(COLLECT_SWITCH_STATEMENT, str(parsed_js), re.DOTALL)
+    except Exception as e:
+        print(e)
+        return None
+    return x
+
+def for_statement(parsed_js):
+    return len(collect_for_statement(parsed_js))
+
+def collect_for_statement(parsed_js):
+    try:
+        x = re.findall(COLLECT_FOR_STATEMENT, str(parsed_js), re.DOTALL)
+    except Exception as e:
+        print(e)
+        return None
+    return x
+
+def while_statement(parsed_js):
+    return len(collect_while_statement(parsed_js))
+
+def collect_while_statement(parsed_js):
+    try:
+        x = re.findall(COLLECT_WHILE_STATEMENT, str(parsed_js), re.DOTALL)
+    except Exception as e:
+        print(e)
+        return None
+    return x
+
+def if_statement(parsed_js):
+    return len(collect_if_statement(parsed_js))
+
+def collect_if_statement(parsed_js):
+    try:
+        x = re.findall(COLLECT_IF_STATEMENT, str(parsed_js), re.DOTALL)
+    except Exception as e:
+        print(e)
+        return None
+    return x
+
+def all_statement(parsed_js):
+    return len(collect_all_statement(parsed_js))
+
+def collect_all_statement(parsed_js):
+    try:
+        x = re.findall(COLLECT_ALL_STATEMENT, str(parsed_js), re.DOTALL)
+    except Exception as e:
+        print(e)
+        return None
+    return x
+
+def identifiers(parsed_js):
     try:
         js_identifiers = []
         for i in collect_func_var_names(parsed_js):
             js_identifiers.append(i)
-        return set(js_identifiers)
+        return js_identifiers
     except Exception as e:
         print(e)
 
 def num_unique_identifiers(js_identifiers):
+    return len(set(js_identifiers))
+
+def num_identifiers(js_identifiers):
     return len(js_identifiers)
 
 def num_unique_var_values(js_var_values):
@@ -78,27 +153,6 @@ def number_of_hex_identifier(identifiers):
         print(e)
         return None
 
-def number_of_0x_var(js_var_values):
-    try:
-        number_of_0x_var_values = 0
-        for v_value in list(js_var_values):
-            if check_identifier_0x(v_value):
-                number_of_0x_var_values += 1
-        return number_of_0x_var_values
-    except Exception as e:
-        print(e)
-        return None
-
-def number_of_hex_var(js_var_values):
-    try:
-        number_of_hex_var_values = 0
-        for v_value in js_var_values:
-            if check_identifier_hex(v_value):
-                number_of_hex_var_values += 1
-        return number_of_hex_var_values
-    except Exception as e:
-        print(e)
-        return None
 
 def js_blocks_declarations(parsed_js):
     try:

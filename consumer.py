@@ -16,9 +16,10 @@ class Script:
 
 
 class Consumer:
-    def __init__(self, topic, broker):
+    def __init__(self, topic, broker, sender):
         self.consumer = KafkaConsumer(topic, bootstrap_servers=broker, api_version=(0,10))
         self.marshal = Marshal()
+        self.sender = sender
 
     def reciver(self):
         try:
@@ -34,4 +35,7 @@ class Consumer:
     def prepare_msg(self, msg):
         msg_unmarshal = self.marshal.unmarshal(Script, json.loads(msg))
         response = requests.get(msg_unmarshal.script)
-        packer_detector.packer_detector.scan_script(response.text)
+        res = packer_detector.packer_detector.scan_script(response.text)
+        print('Obfuscate: ', res)
+
+        self.sender.send(msg_unmarshal.id, res)
