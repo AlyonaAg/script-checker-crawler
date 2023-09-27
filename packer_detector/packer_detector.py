@@ -1,12 +1,12 @@
-import os
-from bs4 import BeautifulSoup
 from pyjsparser import parse
 import packer_detector.features
+import packer_detector.csv
 import packer_detector.config
 import packer_detector.packers_signatures
+import packer_detector.predict
 
 
-def signatures_execution(parsed_js):
+def signatures_execution(parsed_js, collect_mode=False):
     try:
         eval_res = packer_detector.packers_signatures.detect_eval_unescape(parsed_js)
         aes_res = packer_detector.packers_signatures.detect_aes_ctr_decrypt(parsed_js)
@@ -14,14 +14,12 @@ def signatures_execution(parsed_js):
         print('detect_eval_unescape', ":", eval_res)
         print('detect_aes_ctr_decrypt', ":", aes_res)
 
-        if eval_res or aes_res:
-            return True
-        return False
+        return eval_res, aes_res
     except Exception as e:
         print(e)
         return True
 
-def features_collection_execution(js_code_block, parsed_js, identifiers, js_var_values):
+def features_collection_execution(js_code_block, parsed_js, identifiers, js_var_values, collect_mode=False, label=False):
     try:
         num_line_breaks = packer_detector.features.num_line_breaks(js_code_block)
 
@@ -35,6 +33,60 @@ def features_collection_execution(js_code_block, parsed_js, identifiers, js_var_
         num_identifiers = packer_detector.features.num_identifiers(identifiers)
         number_of_0x_identifier = packer_detector.features.number_of_0x_identifier(identifiers)
         number_of_hex_identifier = packer_detector.features.number_of_hex_identifier(identifiers)
+
+        eval_res, aes_res = signatures_execution(parsed_js, collect_mode)
+        if all_statement != 0:
+            append_all_statement_data = [
+                switch_case/all_statement,
+                for_statement/all_statement,
+                while_statement/all_statement,
+                if_statement/all_statement,
+                num_line_breaks/all_statement,
+            ]
+        else:
+            append_all_statement_data = [0, 0, 0, 0, 0]
+
+        if num_identifiers != 0:
+            append_num_identifiers_data = [
+                num_unique_identifiers/num_identifiers,
+                number_of_0x_identifier/num_identifiers,
+                number_of_hex_identifier/num_identifiers,
+            ]
+        else:
+            append_num_identifiers_data = [0, 0, 0]
+
+        if collect_mode:
+            packer_detector.csv.write_to_csv([
+                num_line_breaks,
+                all_statement,
+                switch_case,
+                for_statement,
+                while_statement,
+                if_statement,
+                num_unique_identifiers,
+                num_identifiers,
+                number_of_0x_identifier,
+                number_of_hex_identifier,
+                eval_res,
+                aes_res,
+                ] + append_all_statement_data + append_num_identifiers_data + [label])
+            return False
+        
+        obf_detected = packer_detector.predict.ObfuscateDetected()
+        return obf_detected.predict([
+                num_line_breaks,
+                all_statement,
+                switch_case,
+                for_statement,
+                while_statement,
+                if_statement,
+                num_unique_identifiers,
+                num_identifiers,
+                number_of_0x_identifier,
+                number_of_hex_identifier,
+                eval_res,
+                aes_res,
+                ] + append_all_statement_data + append_num_identifiers_data)
 
         for feature_type in packer_detector.config.LIST_OF_FEATURES:
             for feature_def in packer_detector.config.get_config(feature_type):
@@ -64,25 +116,21 @@ def features_collection_execution(js_code_block, parsed_js, identifiers, js_var_
         print(e)
         return True
 
-def check_script(js_code):
+def check_script(js_code, collect_mode=False, label=False):
     try:
         parsed_js = parse(js_code)
         identifiers = packer_detector.features.identifiers(parsed_js)
         js_var_values = packer_detector.features.var_values_extract(parsed_js)
 
-        res_feature = features_collection_execution(js_code, parsed_js, identifiers, js_var_values)
-        res_signature = signatures_execution(parsed_js)
-
-        if res_feature or res_signature:
-            return True
-        return False
+        return features_collection_execution(js_code, parsed_js, identifiers, js_var_values, collect_mode, label)
     except Exception as e:
+        print("aaa")
         print(e)
         return True
 
-def scan_script(script):
+def scan_script(script, collect_mode=False, label=False):
     try:
-        result = check_script(script)
+        result = check_script(script, collect_mode, label)
         return result
     except Exception as e:
         print(e)
